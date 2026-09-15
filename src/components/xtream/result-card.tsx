@@ -26,6 +26,7 @@ import {
 import type { ParsedAccount, ContentStats } from '@/lib/xtream/types'
 import { formatDateAR, formatDuration } from '@/lib/xtream/types'
 import { Button } from '@/components/ui/button'
+import { SpeedTestCard } from '@/components/xtream/speed-test-card'
 
 interface ResultCardProps {
   data: ParsedAccount
@@ -211,6 +212,17 @@ export function ResultCard({ data, stats, loadingStats, onLoadStats }: ResultCar
           <LinkRow label="بوابة المشغل" value={portalUrl} />
         </CardContent>
       </Card>
+
+      {/* Speed test */}
+      <SpeedTestCard
+        input={{
+          host: meta.host,
+          port: meta.port,
+          protocol: meta.protocol,
+          username: meta.username,
+          password: meta.password,
+        }}
+      />
 
       {/* Raw JSON */}
       <Card>

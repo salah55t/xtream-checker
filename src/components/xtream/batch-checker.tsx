@@ -8,6 +8,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -25,11 +32,13 @@ import {
   XCircle,
   Clock,
   Filter,
+  Gauge,
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import type { ParsedAccount } from '@/lib/xtream/types'
 import { formatDateAR, formatDuration } from '@/lib/xtream/types'
 import type { BatchResultItem } from '@/app/api/batch/route'
+import { SpeedTestCard } from '@/components/xtream/speed-test-card'
 
 interface BatchCheckerProps {
   onCheckSingle?: (input: { url: string }) => void
@@ -441,6 +450,7 @@ function BatchResultRow({
   item: BatchResultItem
   onRecheck: () => void
 }) {
+  const [speedOpen, setSpeedOpen] = useState(false)
   const acc = item.result as ParsedAccount
   const ok = acc.ok
 
@@ -465,53 +475,92 @@ function BatchResultRow({
   }
 
   return (
-    <div className={`rounded-lg border p-3 ${bg}`}>
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 pt-0.5">
-          <span className={`inline-block h-2.5 w-2.5 rounded-full ${statusColor}`} />
-        </div>
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-mono text-muted-foreground">#{item.index + 1}</span>
-            <Badge variant="outline" className={`text-[10px] py-0 h-4 ${ok ? '' : 'border-rose-300 text-rose-700'}`}>
-              {statusLabel}
-            </Badge>
-            {ok && acc.user.isTrial && (
-              <Badge variant="secondary" className="text-[10px] py-0 h-4 bg-amber-100 text-amber-800">تجريبي</Badge>
-            )}
-            {ok && (
-              <span className="text-[10px] text-muted-foreground">
-                {acc.user.activeConnections}/{acc.user.maxConnections} اتصال
-                {acc.user.daysLeft !== null && ` • ${acc.user.daysLeft} يوم`}
-              </span>
-            )}
+    <>
+      <div className={`rounded-lg border p-3 ${bg}`}>
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 pt-0.5">
+            <span className={`inline-block h-2.5 w-2.5 rounded-full ${statusColor}`} />
           </div>
-          <div className="text-xs font-mono text-foreground/80 truncate dir-ltr text-left" dir="ltr" title={item.rawInput}>
-            {item.rawInput}
-          </div>
-          {ok ? (
-            <div className="text-[11px] text-muted-foreground">
-              {acc.meta.host}:{acc.meta.port} • ينتهي {formatDateAR(acc.user.expDate)}
-              {acc.user.durationDays && ` • المدة ${formatDuration(acc.user.durationDays)}`}
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-mono text-muted-foreground">#{item.index + 1}</span>
+              <Badge variant="outline" className={`text-[10px] py-0 h-4 ${ok ? '' : 'border-rose-300 text-rose-700'}`}>
+                {statusLabel}
+              </Badge>
+              {ok && acc.user.isTrial && (
+                <Badge variant="secondary" className="text-[10px] py-0 h-4 bg-amber-100 text-amber-800">تجريبي</Badge>
+              )}
+              {ok && (
+                <span className="text-[10px] text-muted-foreground">
+                  {acc.user.activeConnections}/{acc.user.maxConnections} اتصال
+                  {acc.user.daysLeft !== null && ` • ${acc.user.daysLeft} يوم`}
+                </span>
+              )}
             </div>
-          ) : (
-            <div className="text-[11px] text-rose-700">
-              ⚠ {acc.error}
+            <div className="text-xs font-mono text-foreground/80 truncate dir-ltr text-left" dir="ltr" title={item.rawInput}>
+              {item.rawInput}
+            </div>
+            {ok ? (
+              <div className="text-[11px] text-muted-foreground">
+                {acc.meta.host}:{acc.meta.port} • ينتهي {formatDateAR(acc.user.expDate)}
+                {acc.user.durationDays && ` • المدة ${formatDuration(acc.user.durationDays)}`}
+              </div>
+            ) : (
+              <div className="text-[11px] text-rose-700">
+                ⚠ {acc.error}
+              </div>
+            )}
+          </div>
+          {ok && (
+            <div className="flex flex-col gap-1 shrink-0">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                onClick={onRecheck}
+                title="فحص فردي مفصّل"
+              >
+                تفاصيل
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 text-xs"
+                onClick={() => setSpeedOpen(true)}
+                title="اختبار سرعة الخادم وثباته"
+              >
+                <Gauge className="h-3 w-3 ml-1" />
+                سرعة
+              </Button>
             </div>
           )}
         </div>
-        {ok && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs shrink-0"
-            onClick={onRecheck}
-            title="فحص فردي مفصّل"
-          >
-            تفاصيل
-          </Button>
-        )}
       </div>
-    </div>
+
+      {ok && (
+        <Dialog open={speedOpen} onOpenChange={setSpeedOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Gauge className="h-4 w-4 text-emerald-600" />
+                اختبار سرعة الخادم — {acc.meta.host}:{acc.meta.port}
+              </DialogTitle>
+              <DialogDescription>
+                قياس زمن الاستجابة وثبات الخادم عبر 8 طلبات متتالية، مع حساب التقييم الإجمالي.
+              </DialogDescription>
+            </DialogHeader>
+            <SpeedTestCard
+              input={{
+                host: acc.meta.host,
+                port: acc.meta.port,
+                protocol: acc.meta.protocol,
+                username: acc.meta.username,
+                password: acc.meta.password,
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   )
 }
