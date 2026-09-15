@@ -4,17 +4,21 @@ import { useEffect, useState, useCallback } from 'react'
 import { InputForm, CheckInput } from '@/components/xtream/input-form'
 import { ResultCard } from '@/components/xtream/result-card'
 import { HistoryPanel } from '@/components/xtream/history-panel'
+import { BatchChecker } from '@/components/xtream/batch-checker'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import { Toaster } from '@/components/ui/toaster'
 import {
   AlertCircle,
   Eye,
   Github,
+  ListChecks,
   Radar,
+  Search,
   ShieldCheck,
   Sparkles,
   Tv,
@@ -32,7 +36,10 @@ import {
 } from '@/lib/xtream/types'
 import { DEMO_ACCOUNT, DEMO_STATS } from '@/lib/xtream/demo-data'
 
+type Mode = 'single' | 'batch'
+
 export default function Home() {
+  const [mode, setMode] = useState<Mode>('single')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ParsedAccount | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +54,8 @@ export default function Home() {
 
   const handleCheck = useCallback(
     async (input: CheckInput) => {
+      // Switch to single mode to show the result
+      setMode('single')
       setLoading(true)
       setError(null)
       setResult(null)
@@ -163,6 +172,17 @@ export default function Home() {
     }, 600)
   }, [toast])
 
+  const handleBatchSingle = useCallback(
+    (input: { url: string }) => {
+      handleCheck({ url: input.url })
+      // Scroll to top so the user sees the result
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    },
+    [handleCheck]
+  )
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-emerald-50/40 via-background to-background">
       <Toaster />
@@ -180,7 +200,7 @@ export default function Home() {
             </div>
           </div>
           <a
-            href="https://github.com"
+            href="https://github.com/salah55t/xtream-checker"
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
@@ -202,8 +222,8 @@ export default function Home() {
             افحص اشتراكات Xtream Codes في ثوانٍ
           </h2>
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-            الصق رابط اشتراكك وستحصل فوراً على حالة الاشتراك وعدد الاتصالات النشطة والحد الأقصى
-            وتاريخ الانتهاء ومدة الباقة ومحتوى القنوات والأفلام والمسلسلات — كل ذلك في واجهة عربية واضحة.
+            افحص رابطاً واحداً أو قائمة كاملة تصل إلى 50 رابطاً دفعة واحدة، واحصل على حالة الاشتراك وعدد الاتصالات
+            وتاريخ الانتهاء ومدة الباقة ومحتوى القنوات والأفلام والمسلسلات — مع إمكانية تصدير النتائج CSV/TXT.
           </p>
         </div>
       </section>
@@ -220,44 +240,64 @@ export default function Home() {
 
       {/* Main */}
       <main className="container mx-auto max-w-6xl px-4 pb-10 flex-1">
+        {/* Mode switcher */}
+        <div className="mb-6 flex justify-center">
+          <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+            <TabsList className="grid grid-cols-2 w-full max-w-md">
+              <TabsTrigger value="single" className="gap-1.5">
+                <Search className="h-3.5 w-3.5" />
+                فحص فردي
+              </TabsTrigger>
+              <TabsTrigger value="batch" className="gap-1.5">
+                <ListChecks className="h-3.5 w-3.5" />
+                فحص قائمة (حتى 50)
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <InputForm onCheck={handleCheck} loading={loading} />
+            {mode === 'single' ? (
+              <>
+                <InputForm onCheck={handleCheck} loading={loading} />
 
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShowDemo}
-                disabled={loading}
-                className="text-muted-foreground hover:text-emerald-700"
-              >
-                <Eye className="h-3.5 w-3.5 ml-1.5" />
-                عرض تجريبي لشكل النتائج
-              </Button>
-            </div>
+                <div className="flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleShowDemo}
+                    disabled={loading}
+                    className="text-muted-foreground hover:text-emerald-700"
+                  >
+                    <Eye className="h-3.5 w-3.5 ml-1.5" />
+                    عرض تجريبي لشكل النتائج
+                  </Button>
+                </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>فشل الفحص</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>فشل الفحص</AlertTitle>
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            {loading && <LoadingSkeleton />}
+                {loading && <LoadingSkeleton />}
 
-            {!loading && result && (
-              <ResultCard
-                data={result}
-                stats={stats}
-                loadingStats={loadingStats}
-                onLoadStats={handleLoadStats}
-              />
-            )}
+                {!loading && result && (
+                  <ResultCard
+                    data={result}
+                    stats={stats}
+                    loadingStats={loadingStats}
+                    onLoadStats={handleLoadStats}
+                  />
+                )}
 
-            {!loading && !result && !error && (
-              <EmptyState />
+                {!loading && !result && !error && <EmptyState />}
+              </>
+            ) : (
+              <BatchChecker onCheckSingle={handleBatchSingle} />
             )}
           </div>
 
@@ -282,6 +322,13 @@ export default function Home() {
                   <p>
                     ندعم روابط get.php و xtream:// و USER:PASS@host:port. البيانات تُجلب من
                     player_api.php الرسمي.
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <ListChecks className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <p>
+                    في وضع الفحص المتعدد يتم فحص الروابط بـ 5 طلبات متوازية لتسريع العملية،
+                    مع إمكانية تصفية النتائج وتصديرها بصيغة CSV أو TXT.
                   </p>
                 </div>
               </CardContent>
